@@ -8,8 +8,32 @@ export class ApiError extends Error {
   }
 }
 
-async function handle<T>(res: Response): Promise<T> {
+const TOKEN_KEY = 'bnk_token';
+
+export function getToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+export function setToken(token: string): void {
+  localStorage.setItem(TOKEN_KEY, token);
+}
+export function clearToken(): void {
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function handle<T>(res: Response, path: string): Promise<T> {
   if (!res.ok) {
+    // Session expired/invalid on a protected route → drop token and bounce to login.
+    if (res.status === 401 && !path.startsWith('/auth/')) {
+      clearToken();
+      if (window.location.pathname.startsWith('/app')) {
+        window.location.assign('/login');
+      }
+    }
     let body: any = {};
     try {
       body = await res.json();
@@ -29,23 +53,24 @@ async function handle<T>(res: Response): Promise<T> {
 const BASE = '/api';
 
 export const api = {
-  get: <T>(path: string) => fetch(`${BASE}${path}`).then((r) => handle<T>(r)),
+  get: <T>(path: string) => fetch(`${BASE}${path}`, { headers: authHeaders() }).then((r) => handle<T>(r, path)),
 
   post: <T>(path: string, data: unknown) =>
     fetch(`${BASE}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(data),
-    }).then((r) => handle<T>(r)),
+    }).then((r) => handle<T>(r, path)),
 
   put: <T>(path: string, data: unknown) =>
     fetch(`${BASE}${path}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(data),
-    }).then((r) => handle<T>(r)),
+    }).then((r) => handle<T>(r, path)),
 
-  del: <T>(path: string) => fetch(`${BASE}${path}`, { method: 'DELETE' }).then((r) => handle<T>(r)),
+  del: <T>(path: string) =>
+    fetch(`${BASE}${path}`, { method: 'DELETE', headers: authHeaders() }).then((r) => handle<T>(r, path)),
 };
 
 /** Build a query string from a filter object, omitting empty / "all" values. */

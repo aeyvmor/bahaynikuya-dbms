@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -11,6 +12,7 @@ async function resetSequences() {
     ['leases', 'lease_id'],
     ['payments', 'payment_id'],
     ['maintenance_requests', 'request_id'],
+    ['users', 'user_id'],
   ];
   for (const [t, c] of tables) {
     await prisma.$executeRawUnsafe(
@@ -28,6 +30,7 @@ async function main() {
   await prisma.lease.deleteMany();
   await prisma.tenant.deleteMany();
   await prisma.room.deleteMany();
+  await prisma.user.deleteMany();
 
   // ----- Rooms -----
   await prisma.room.createMany({
@@ -90,9 +93,18 @@ async function main() {
     ],
   });
 
+  // ----- Users (admin login) -----
+  await prisma.user.createMany({
+    data: [
+      { id: 1, name: 'House Administrator', email: 'admin@bahaynikuya.com', passwordHash: await bcrypt.hash('admin123', 10), role: 'admin' },
+      { id: 2, name: 'Front Desk Staff', email: 'staff@bahaynikuya.com', passwordHash: await bcrypt.hash('staff123', 10), role: 'staff' },
+    ],
+  });
+
   await resetSequences();
 
   const counts = {
+    users: await prisma.user.count(),
     tenants: await prisma.tenant.count(),
     rooms: await prisma.room.count(),
     leases: await prisma.lease.count(),
@@ -100,6 +112,7 @@ async function main() {
     maintenance: await prisma.maintenanceRequest.count(),
   };
   console.log('Seed complete:', counts);
+  console.log('Login with admin@bahaynikuya.com / admin123');
 }
 
 main()

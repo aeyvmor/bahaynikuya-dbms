@@ -9,12 +9,28 @@ export default {
       screens: { '2xl': '1400px' },
     },
     extend: {
+      fontFamily: {
+        sans: ['"Nunito Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Fraunces"', 'ui-serif', 'Georgia', 'serif'],
+      },
       colors: {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
+        // Fixed brand palette (use tints via /10–/20 for soft surfaces)
+        brand: {
+          green: '#629460',
+          cream: '#E5D4C0',
+          charcoal: '#424B54',
+          red: '#F93943',
+          blue: '#7EB2DD',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info))',
+          foreground: 'hsl(var(--info-foreground))',
+        },
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',

@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { Banknote, BedDouble, AlertTriangle, FileText, Wrench } from 'lucide-react';
+import { Banknote, BedDouble, AlertTriangle, FileText, Wrench, PartyPopper } from 'lucide-react';
 import { PageHeader } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/StatusBadge';
+import { EmptyState } from '@/components/decor';
 import { api } from '@/lib/api';
 import { formatPeso, humanize } from '@/lib/format';
 import type { Dashboard as DashboardData } from '@/types';
@@ -40,8 +41,8 @@ function StatCard({
 
 const MAINT_META: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-amber-500' },
-  in_progress: { label: 'In progress', color: 'bg-blue-500' },
-  resolved: { label: 'Resolved', color: 'bg-emerald-500' },
+  in_progress: { label: 'In progress', color: 'bg-brand-blue' },
+  resolved: { label: 'Resolved', color: 'bg-brand-green' },
 };
 
 export default function Dashboard() {
@@ -65,28 +66,28 @@ export default function Dashboard() {
               value={formatPeso(data.incomeThisMonth)}
               hint="Sum of paid payments this month"
               icon={Banknote}
-              accent="bg-emerald-100 text-emerald-700"
+              accent="bg-brand-green/15 text-brand-green"
             />
             <StatCard
               title="Occupancy rate"
               value={`${data.occupancy.rate}%`}
               hint={`${data.occupancy.occupied} of ${data.occupancy.total} rooms occupied`}
               icon={BedDouble}
-              accent="bg-blue-100 text-blue-700"
+              accent="bg-brand-blue/25 text-[#2f5d86]"
             />
             <StatCard
               title="Overdue payments"
               value={formatPeso(data.overdueTotal)}
               hint={`${data.overdue.length} outstanding payment${data.overdue.length === 1 ? '' : 's'}`}
               icon={AlertTriangle}
-              accent="bg-red-100 text-red-700"
+              accent="bg-brand-red/15 text-brand-red"
             />
             <StatCard
               title="Active leases"
               value={String(data.activeLeases)}
               hint={`${data.activeTenants} active tenants`}
               icon={FileText}
-              accent="bg-indigo-100 text-indigo-700"
+              accent="bg-brand-charcoal/10 text-brand-charcoal"
             />
           </>
         )}
@@ -109,7 +110,12 @@ export default function Dashboard() {
                 ))}
               </div>
             ) : data.overdue.length === 0 ? (
-              <p className="px-6 py-4 text-sm text-muted-foreground">No overdue or partial payments. 🎉</p>
+              <EmptyState
+                icon={PartyPopper}
+                title="All settled!"
+                description="No overdue or partial balances right now — everyone's paid up."
+                className="py-10"
+              />
             ) : (
               <Table>
                 <TableHeader>

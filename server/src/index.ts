@@ -8,7 +8,10 @@ import payments from './routes/payments';
 import maintenance from './routes/maintenance';
 import dashboard from './routes/dashboard';
 import backup from './routes/backup';
+import auth from './routes/auth';
+import contact from './routes/contact';
 import { errorHandler } from './middleware/errorHandler';
+import { requireAuth } from './middleware/requireAuth';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -18,13 +21,18 @@ app.use(express.json({ limit: '10mb' }));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'bahay-ni-kuya-api' }));
 
-app.use('/api/tenants', tenants);
-app.use('/api/rooms', rooms);
-app.use('/api/leases', leases);
-app.use('/api/payments', payments);
-app.use('/api/maintenance', maintenance);
-app.use('/api/dashboard', dashboard);
-app.use('/api', backup); // GET /api/backup, POST /api/restore
+// Public endpoints
+app.use('/api/auth', auth);
+app.use('/api/contact', contact);
+
+// Protected endpoints (require a valid session token)
+app.use('/api/tenants', requireAuth, tenants);
+app.use('/api/rooms', requireAuth, rooms);
+app.use('/api/leases', requireAuth, leases);
+app.use('/api/payments', requireAuth, payments);
+app.use('/api/maintenance', requireAuth, maintenance);
+app.use('/api/dashboard', requireAuth, dashboard);
+app.use('/api', requireAuth, backup); // GET /api/backup, POST /api/restore
 
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 app.use(errorHandler);

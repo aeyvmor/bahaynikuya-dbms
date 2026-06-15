@@ -4,6 +4,11 @@
 -- ============================================================
 
 -- ---------- INSERT ----------
+-- Login accounts (password_hash shown as a placeholder; the app stores a bcrypt hash).
+INSERT INTO users (name, email, password_hash, role) VALUES
+  ('House Administrator', 'admin@bahaynikuya.com', '<bcrypt-hash-of-admin123>', 'admin'),
+  ('Front Desk Staff',    'staff@bahaynikuya.com', '<bcrypt-hash-of-staff123>', 'staff');
+
 INSERT INTO rooms (room_number, floor, type, monthly_rate, max_occupancy, status) VALUES
   ('101', 1, 'single', 4500.00, 1, 'occupied'),
   ('102', 1, 'double', 6000.00, 2, 'occupied'),

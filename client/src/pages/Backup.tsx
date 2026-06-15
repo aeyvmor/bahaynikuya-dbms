@@ -80,7 +80,7 @@ export default function Backup() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Download className="h-4 w-4 text-emerald-600" /> Export Backup
+              <Download className="h-4 w-4 text-brand-green" /> Export Backup
             </CardTitle>
             <CardDescription>
               Download every table (tenants, rooms, leases, payments, maintenance) as a single JSON file.
@@ -102,12 +102,12 @@ export default function Backup() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Upload className="h-4 w-4 text-blue-600" /> Restore Backup
+              <Upload className="h-4 w-4 text-[#2f5d86]" /> Restore Backup
             </CardTitle>
             <CardDescription>Upload a backup JSON file to replace all current data.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <div className="flex items-start gap-3 rounded-xl border border-brand-red/25 bg-brand-red/10 p-3 text-sm text-brand-red">
               <ShieldAlert className="h-5 w-5 shrink-0" />
               <span>Restoring overwrites the entire database. Export a backup first if unsure.</span>
             </div>

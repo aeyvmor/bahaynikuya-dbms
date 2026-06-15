@@ -13,6 +13,18 @@ CREATE TYPE lease_status    AS ENUM ('active', 'ended');
 CREATE TYPE payment_status  AS ENUM ('paid', 'partial', 'overdue');
 CREATE TYPE priority_level  AS ENUM ('low', 'medium', 'high');
 CREATE TYPE request_status  AS ENUM ('pending', 'in_progress', 'resolved');
+CREATE TYPE user_role       AS ENUM ('admin', 'staff');
+
+-- users (admin / staff login accounts)
+CREATE TABLE users (
+    user_id       SERIAL PRIMARY KEY,
+    name          VARCHAR(100) NOT NULL,
+    email         VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role          user_role    NOT NULL DEFAULT 'admin',
+    created_at    TIMESTAMP    NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMP    NOT NULL DEFAULT now()
+);
 
 -- tenants
 CREATE TABLE tenants (

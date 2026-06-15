@@ -1,9 +1,10 @@
 # Bahay ni Kuya — Boarding House Management System
 
 A web-based management system for the **Bahay ni Kuya** boarding house (~30 student tenants).
-Full-stack app with a real PostgreSQL database: tenant/room/lease/payment/maintenance records,
-CRUD with search & filtering, a reports dashboard, an ER diagram, a database inspector, and
-JSON backup/restore.
+Full-stack app with a real PostgreSQL database: a public marketing site (home, about, features,
+contact), secure admin authentication, and an admin app with tenant/room/lease/payment/maintenance
+records, CRUD with search & filtering, a reports dashboard, an ER diagram, a database inspector,
+and JSON backup/restore.
 
 > Course project for ITS131P. Built as a real client/server app (not a single HTML file).
 
@@ -51,16 +52,26 @@ Then open **http://localhost:5173** (if 5173 is busy, Vite prints the actual por
 | API (Express) | http://localhost:4000 |
 | PostgreSQL | `localhost:5433` → container `5432` (host 5433 avoids clashing with a local Postgres on 5432) |
 | DB / user / pass | `bahay_ni_kuya_db` / `bnk` / `bnk_password` |
+| Admin login | `admin@bahaynikuya.com` / `admin123` |
+| Staff login | `staff@bahaynikuya.com` / `staff123` |
 
-Connection string lives in `server/.env` (`DATABASE_URL`). See `.env.example`.
+`server/.env` holds `DATABASE_URL`, `PORT`, and `JWT_SECRET` (used to sign auth tokens —
+change it to any long random string for your own deployment). See `.env.example`.
+
+The public site lives at `/` (home, about, features, contact); the admin app lives at `/app`
+and requires signing in. New accounts can be created on the **Register** page.
 
 ## Features
 
+- **Public website** — landing page, about, features/services, and a working contact form.
+- **Authentication** — register and log in (admin/staff accounts); the admin app is protected
+  with token-based sessions, and a profile page to update details or change password.
 - **File maintenance (CRUD)** for all 5 entities — Tenants, Rooms, Leases, Payments, Maintenance.
   - Add / Edit via shadcn modal forms with foreign-key dropdowns and validation.
   - **Soft-delete** for tenants (status → `inactive`); hard-delete elsewhere with **dependency guards** (e.g. a room with leases can't be deleted).
   - **Search & filter** per module (server-side).
 - **Dashboard** — income this month, occupancy rate, overdue payments list (tenant + amount + days overdue), maintenance summary by status.
+- **Reports** — a printable operational summary (income, occupancy by room, outstanding balances, maintenance by status & priority).
 - **Database Inspector** — browse raw rows of any table with TanStack Table (sort/paginate).
 - **ER Diagram** — interactive React Flow diagram of the schema (PK/FK markers, 1:N relations).
 - **Backup & Restore** — export the whole database as JSON; restore by uploading a backup file.
@@ -77,17 +88,19 @@ Connection string lives in `server/.env` (`DATABASE_URL`). See `.env.example`.
 │   │   ├── seed.ts             # sample data (brief + added June payments)
 │   │   └── sql/{ddl,dml}.sql   # raw SQL mirror for the course deliverable
 │   └── src/
-│       ├── index.ts            # app bootstrap + routes
-│       ├── lib/{crud,schemas,serialize}.ts
-│       ├── middleware/errorHandler.ts
-│       └── routes/{tenants,rooms,leases,payments,maintenance,dashboard,backup}.ts
+│       ├── index.ts            # app bootstrap + routes (public + protected)
+│       ├── lib/{crud,schemas,serialize,auth}.ts
+│       ├── middleware/{errorHandler,requireAuth}.ts
+│       └── routes/{tenants,rooms,leases,payments,maintenance,dashboard,backup,auth,contact}.ts
 └── client/                    # Vite + React UI
     └── src/
-        ├── components/         # DataTable, EntityModal, StatusBadge, ConfirmDialog, ui/*
+        ├── components/         # DataTable, EntityModal, StatusBadge, ConfirmDialog,
+        │                       # Logo, RequireAuth, layout/{Layout,PublicLayout,AuthLayout,AppSidebar}, ui/*
         ├── hooks/useCrud.ts
-        ├── lib/{api,format,utils}.ts
-        └── pages/              # Dashboard, Tenants, Rooms, Leases, Payments,
-                                # Maintenance, DatabasePage, ERDiagram, Backup
+        ├── lib/{api,auth,format,utils}.ts
+        └── pages/              # Public: Landing, About, Features, Contact, Login, Register
+                                # Admin:  Dashboard, Tenants, Rooms, Leases, Payments, Maintenance,
+                                #         Reports, Profile, DatabasePage, ERDiagram, Backup
 ```
 
 ## Data model

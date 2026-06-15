@@ -26,15 +26,15 @@ interface TableData {
 
 function TableNode({ data }: NodeProps<TableData>) {
   return (
-    <div className="w-60 overflow-hidden rounded-lg border border-slate-300 bg-white shadow-md">
+    <div className="w-60 overflow-hidden rounded-xl border border-border bg-card shadow-[0_2px_10px_-4px_rgba(66,75,84,0.12)]">
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-primary" />
-      <div className="bg-slate-800 px-3 py-2 text-sm font-semibold text-white">{data.name}</div>
-      <div className="divide-y">
+      <div className="bg-sidebar px-3 py-2 text-sm font-semibold text-white">{data.name}</div>
+      <div className="divide-y divide-border/70">
         {data.columns.map((c) => (
           <div key={c.name} className="flex items-center justify-between px-3 py-1.5 text-xs">
             <span className="flex items-center gap-1.5">
               {c.pk && <KeyRound className="h-3 w-3 text-amber-500" />}
-              {c.fk && !c.pk && <Link2 className="h-3 w-3 text-blue-500" />}
+              {c.fk && !c.pk && <Link2 className="h-3 w-3 text-[#3a78ad]" />}
               <span className={c.pk ? 'font-semibold' : ''}>{c.name}</span>
             </span>
             <span className="font-mono text-[10px] text-muted-foreground">{c.type}</span>
@@ -149,10 +149,10 @@ export default function ERDiagram() {
         label: r.label,
         type: 'smoothstep',
         animated: true,
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: { stroke: '#2563eb', strokeWidth: 1.5 },
-        labelStyle: { fontSize: 11, fontWeight: 600 },
-        labelBgStyle: { fill: '#eff6ff' },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#629460' },
+        style: { stroke: '#629460', strokeWidth: 1.5 },
+        labelStyle: { fontSize: 11, fontWeight: 600, fill: '#424B54' },
+        labelBgStyle: { fill: '#EAE0D2' },
       })),
     []
   );
@@ -163,7 +163,7 @@ export default function ERDiagram() {
         title="ER Diagram"
         description="Entity-relationship model of the database. Drag tables to rearrange; scroll to zoom."
       />
-      <div className="h-[640px] overflow-hidden rounded-xl border bg-slate-50">
+      <div className="h-[640px] overflow-hidden rounded-2xl border bg-secondary">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -173,7 +173,7 @@ export default function ERDiagram() {
           proOptions={{ hideAttribution: true }}
           nodesConnectable={false}
         >
-          <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#cbd5e1" />
+          <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#C9BBA8" />
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>
@@ -182,7 +182,7 @@ export default function ERDiagram() {
           <KeyRound className="h-3.5 w-3.5 text-amber-500" /> Primary key
         </span>
         <span className="flex items-center gap-1.5">
-          <Link2 className="h-3.5 w-3.5 text-blue-500" /> Foreign key
+          <Link2 className="h-3.5 w-3.5 text-[#3a78ad]" /> Foreign key
         </span>
         <span>1 : N — one-to-many relationship</span>
       </div>

@@ -1,3 +1,19 @@
+export type UserRole = 'admin' | 'staff';
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 export type TenantStatus = 'active' | 'inactive';
 export type RoomType = 'single' | 'double' | 'shared';
 export type RoomStatus = 'available' | 'occupied' | 'under_maintenance';

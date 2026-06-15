@@ -53,3 +53,34 @@ export const maintenanceCreate = z.object({
   status: z.enum(['pending', 'in_progress', 'resolved']).default('pending'),
 });
 export const maintenanceUpdate = maintenanceCreate.partial();
+
+// ---------- Auth ----------
+export const registerSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(100),
+  email: z.string().trim().toLowerCase().email('Enter a valid email address.').max(100),
+  password: z.string().min(6, 'Password must be at least 6 characters.').max(100),
+  role: z.enum(['admin', 'staff']).default('admin'),
+});
+
+export const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().email('Enter a valid email address.'),
+  password: z.string().min(1, 'Password is required.'),
+});
+
+export const profileSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(100),
+  email: z.string().trim().toLowerCase().email('Enter a valid email address.').max(100),
+});
+
+export const passwordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required.'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters.').max(100),
+});
+
+// ---------- Contact ----------
+export const contactSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(100),
+  email: z.string().trim().email('Enter a valid email address.').max(100),
+  subject: z.string().trim().min(2, 'Subject is required.').max(150),
+  message: z.string().trim().min(10, 'Message must be at least 10 characters.').max(2000),
+});

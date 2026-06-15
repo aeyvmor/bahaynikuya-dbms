@@ -8,10 +8,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowUpDown, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/decor';
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -90,8 +91,8 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={columns.length} className="h-28 text-center text-muted-foreground">
-                  {emptyMessage}
+                <TableCell colSpan={columns.length} className="p-0">
+                  <EmptyState icon={Inbox} title={emptyMessage} className="py-12" />
                 </TableCell>
               </TableRow>
             )}
