@@ -24,7 +24,6 @@ async function resetSequences() {
 async function main() {
   console.log('Seeding Bahay ni Kuya database...');
 
-  // Wipe (respect FK order)
   await prisma.payment.deleteMany();
   await prisma.maintenanceRequest.deleteMany();
   await prisma.lease.deleteMany();
@@ -32,7 +31,6 @@ async function main() {
   await prisma.room.deleteMany();
   await prisma.user.deleteMany();
 
-  // ----- Rooms -----
   await prisma.room.createMany({
     data: [
       { id: 1, roomNumber: '101', floor: 1, type: 'single', monthlyRate: 4500, maxOccupancy: 1, status: 'occupied' },
@@ -43,7 +41,6 @@ async function main() {
     ],
   });
 
-  // ----- Tenants -----
   await prisma.tenant.createMany({
     data: [
       { id: 1, firstName: 'Carlos', lastName: 'Reyes', email: 'carlos.reyes@example.com', phone: '0917-123-4501', status: 'active' },
@@ -54,7 +51,6 @@ async function main() {
     ],
   });
 
-  // ----- Leases -----
   await prisma.lease.createMany({
     data: [
       { id: 1, tenantId: 1, roomId: 1, startDate: d('2024-06-01'), endDate: null, status: 'active' },
@@ -65,16 +61,13 @@ async function main() {
     ],
   });
 
-  // ----- Payments (brief: May/Apr) + added June 2026 so "income this month" is live -----
   await prisma.payment.createMany({
     data: [
-      // Brief sample data (exact)
       { id: 1, leaseId: 1, amount: 4500, paymentDate: d('2026-05-05'), status: 'paid' },
       { id: 2, leaseId: 2, amount: 6000, paymentDate: d('2026-05-03'), status: 'paid' },
       { id: 3, leaseId: 3, amount: 3000, paymentDate: d('2026-05-10'), status: 'paid' },
       { id: 4, leaseId: 4, amount: 1500, paymentDate: d('2026-05-12'), status: 'partial' },
       { id: 5, leaseId: 1, amount: 4500, paymentDate: d('2026-04-04'), status: 'paid' },
-      // Added current-month (June 2026) records
       { id: 6, leaseId: 1, amount: 4500, paymentDate: d('2026-06-05'), status: 'paid' },
       { id: 7, leaseId: 2, amount: 6000, paymentDate: d('2026-06-03'), status: 'paid' },
       { id: 8, leaseId: 3, amount: 3000, paymentDate: d('2026-06-10'), status: 'paid' },
@@ -82,7 +75,6 @@ async function main() {
     ],
   });
 
-  // ----- Maintenance Requests -----
   await prisma.maintenanceRequest.createMany({
     data: [
       { id: 1, roomId: 5, description: 'Air-conditioning unit not cooling; needs servicing.', priority: 'high', reportedDate: d('2026-05-20'), status: 'in_progress' },
@@ -93,7 +85,6 @@ async function main() {
     ],
   });
 
-  // ----- Users (admin login) -----
   await prisma.user.createMany({
     data: [
       { id: 1, name: 'House Administrator', email: 'admin@bahaynikuya.com', passwordHash: await bcrypt.hash('admin123', 10), role: 'admin' },

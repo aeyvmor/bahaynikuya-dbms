@@ -9,18 +9,15 @@ router.get('/', async (_req, res, next) => {
     const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
 
-    // Total income this month (paid only)
     const incomeAgg = await prisma.payment.aggregate({
       _sum: { amount: true },
       where: { status: 'paid', paymentDate: { gte: monthStart, lt: monthEnd } },
     });
     const incomeThisMonth = Number(incomeAgg._sum.amount ?? 0);
 
-    // Occupancy
     const totalRooms = await prisma.room.count();
     const occupiedRooms = await prisma.room.count({ where: { status: 'occupied' } });
 
-    // Overdue list = not-fully-paid (partial OR overdue)
     const outstanding = await prisma.payment.findMany({
       where: { status: { in: ['partial', 'overdue'] } },
       include: { lease: { include: { tenant: true, room: true } } },
@@ -41,7 +38,6 @@ router.get('/', async (_req, res, next) => {
     });
     const overdueTotal = overdue.reduce((sum, o) => sum + o.amount, 0);
 
-    // Maintenance by status
     const grouped = await prisma.maintenanceRequest.groupBy({
       by: ['status'],
       _count: { _all: true },
@@ -51,7 +47,6 @@ router.get('/', async (_req, res, next) => {
       maintenanceByStatus[g.status] = g._count._all;
     });
 
-    // Extra quick stats
     const activeTenants = await prisma.tenant.count({ where: { status: 'active' } });
     const activeLeases = await prisma.lease.count({ where: { status: 'active' } });
 

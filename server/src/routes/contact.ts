@@ -3,11 +3,6 @@ import { contactSchema } from '../lib/schemas';
 
 const router = Router();
 
-/**
- * POST /api/contact — public contact form.
- * Validates the submission and acknowledges it. (Demo system: messages are
- * logged server-side rather than persisted or emailed.)
- */
 router.post('/', async (req, res, next) => {
   try {
     const data = contactSchema.parse(req.body);

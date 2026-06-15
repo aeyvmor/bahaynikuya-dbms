@@ -26,7 +26,6 @@ export function verifyToken(token: string): TokenPayload {
   return jwt.verify(token, JWT_SECRET) as unknown as TokenPayload;
 }
 
-/** Strip the password hash before returning a user over the API. */
 export function publicUser<T extends { passwordHash?: string }>(user: T): Omit<T, 'passwordHash'> {
   const { passwordHash, ...rest } = user;
   return rest;

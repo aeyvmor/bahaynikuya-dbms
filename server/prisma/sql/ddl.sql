@@ -1,9 +1,4 @@
--- ============================================================
---  Bahay ni Kuya Boarding House Management System
---  DDL — Data Definition Language  (reference mirror of Prisma schema)
---  The live schema is created by Prisma migrations; this file documents
---  the equivalent raw SQL for the course deliverable.
--- ============================================================
+-- Bahay ni Kuya — raw SQL mirror of the Prisma schema.
 
 -- Enumerated types
 CREATE TYPE tenant_status   AS ENUM ('active', 'inactive');

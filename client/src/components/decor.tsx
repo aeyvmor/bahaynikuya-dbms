@@ -1,11 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-/**
- * Woven-lattice backdrop — a subtle diamond weave inspired by Filipino
- * *banig* mats. Solid strokes only (no gradients). Control color + opacity
- * with text-/opacity- classes, e.g. `text-white/10`.
- */
 export function WeaveBackdrop({ className, scale = 22 }: { className?: string; scale?: number }) {
   const id = useId().replace(/:/g, '');
   return (
@@ -25,7 +20,6 @@ export function WeaveBackdrop({ className, scale = 22 }: { className?: string; s
   );
 }
 
-/** Sun-ray burst — an abstract nod to the Philippine sun. Solid fill. */
 export function SunBurst({ className, rays = 12 }: { className?: string; rays?: number }) {
   const spokes = Array.from({ length: rays });
   return (
@@ -43,7 +37,6 @@ export function SunBurst({ className, rays = 12 }: { className?: string; rays?: 
   );
 }
 
-/** A friendly little house line-illustration for empty states. */
 export function HouseDoodle({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 96 96" className={className} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -56,7 +49,6 @@ export function HouseDoodle({ className }: { className?: string }) {
   );
 }
 
-/** Decorative section eyebrow with a small sunburst motif. */
 export function SectionLabel({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <span className={cn('inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-primary', className)}>
@@ -66,7 +58,6 @@ export function SectionLabel({ children, className }: { children: ReactNode; cla
   );
 }
 
-/** A warm, human empty state — icon (or illustration) + title + helper text + optional action. */
 export function EmptyState({
   icon: Icon,
   illustration,

@@ -1,6 +1,3 @@
-// Bahay ni Kuya — Prisma schema
-// Models map to the proposal's snake_case table/column names via @map / @@map.
-
 generator client {
   provider = "prisma-client-js"
 }

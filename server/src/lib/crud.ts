@@ -3,17 +3,14 @@ import { z } from 'zod';
 import { serialize } from './serialize';
 
 type CrudOptions = {
-  delegate: any; // a Prisma model delegate (e.g. prisma.tenant)
+  delegate: any;
   createSchema: z.ZodTypeAny;
   updateSchema: z.ZodTypeAny;
   buildWhere?: (query: any) => any;
   include?: any;
   orderBy?: any;
-  /** field names whose string value should be converted to a Date before write */
   dateFields?: string[];
-  /** tenants: set status=inactive instead of deleting */
   softDelete?: boolean;
-  /** return { blocked, message } to refuse a hard delete with 409 */
   checkDependents?: (id: number) => Promise<{ blocked: boolean; message?: string }>;
 };
 
@@ -34,7 +31,6 @@ export function createCrudRouter(opts: CrudOptions): Router {
   const router = Router();
   const { delegate, include, orderBy = { id: 'asc' }, dateFields = [] } = opts;
 
-  // LIST (with search/filter)
   router.get('/', async (req, res, next) => {
     try {
       const where = opts.buildWhere ? opts.buildWhere(req.query) : {};
@@ -45,7 +41,6 @@ export function createCrudRouter(opts: CrudOptions): Router {
     }
   });
 
-  // GET one
   router.get('/:id', async (req, res, next) => {
     try {
       const row = await delegate.findUnique({ where: { id: Number(req.params.id) }, include });
@@ -56,7 +51,6 @@ export function createCrudRouter(opts: CrudOptions): Router {
     }
   });
 
-  // CREATE
   router.post('/', async (req, res, next) => {
     try {
       const parsed = opts.createSchema.parse(req.body);
@@ -68,7 +62,6 @@ export function createCrudRouter(opts: CrudOptions): Router {
     }
   });
 
-  // UPDATE
   router.put('/:id', async (req, res, next) => {
     try {
       const parsed = opts.updateSchema.parse(req.body);
@@ -80,7 +73,6 @@ export function createCrudRouter(opts: CrudOptions): Router {
     }
   });
 
-  // DELETE (soft for tenants, hard + dependency guard otherwise)
   router.delete('/:id', async (req, res, next) => {
     try {
       const id = Number(req.params.id);

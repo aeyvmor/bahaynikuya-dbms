@@ -9,7 +9,6 @@ export function formatPeso(value: number | string | null | undefined): string {
 
 export function formatDate(value: string | null | undefined): string {
   if (!value) return '—';
-  // values arrive as 'YYYY-MM-DD'
   const [y, m, d] = value.split('-').map(Number);
   if (!y || !m || !d) return value;
   const date = new Date(Date.UTC(y, m - 1, d));
@@ -21,7 +20,6 @@ export function formatDate(value: string | null | undefined): string {
   });
 }
 
-/** Title-cases an enum value like "under_maintenance" -> "Under maintenance". */
 export function humanize(value: string | null | undefined): string {
   if (!value) return '—';
   const s = value.replace(/_/g, ' ');

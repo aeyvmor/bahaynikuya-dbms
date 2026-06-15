@@ -21,11 +21,9 @@ app.use(express.json({ limit: '10mb' }));
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'bahay-ni-kuya-api' }));
 
-// Public endpoints
 app.use('/api/auth', auth);
 app.use('/api/contact', contact);
 
-// Protected endpoints (require a valid session token)
 app.use('/api/tenants', requireAuth, tenants);
 app.use('/api/rooms', requireAuth, rooms);
 app.use('/api/leases', requireAuth, leases);

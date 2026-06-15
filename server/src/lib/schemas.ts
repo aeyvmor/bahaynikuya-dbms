@@ -4,7 +4,6 @@ const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected date as YYYY-MM-DD');
 
-// ---------- Tenant ----------
 export const tenantCreate = z.object({
   firstName: z.string().trim().min(1).max(50),
   lastName: z.string().trim().min(1).max(50),
@@ -14,7 +13,6 @@ export const tenantCreate = z.object({
 });
 export const tenantUpdate = tenantCreate.partial();
 
-// ---------- Room ----------
 export const roomCreate = z.object({
   roomNumber: z.string().trim().min(1).max(10),
   floor: z.coerce.number().int().min(0).max(99),
@@ -25,7 +23,6 @@ export const roomCreate = z.object({
 });
 export const roomUpdate = roomCreate.partial();
 
-// ---------- Lease ----------
 export const leaseCreate = z.object({
   tenantId: z.coerce.number().int().positive(),
   roomId: z.coerce.number().int().positive(),
@@ -35,7 +32,6 @@ export const leaseCreate = z.object({
 });
 export const leaseUpdate = leaseCreate.partial();
 
-// ---------- Payment ----------
 export const paymentCreate = z.object({
   leaseId: z.coerce.number().int().positive(),
   amount: z.coerce.number().positive().max(999999),
@@ -44,7 +40,6 @@ export const paymentCreate = z.object({
 });
 export const paymentUpdate = paymentCreate.partial();
 
-// ---------- Maintenance Request ----------
 export const maintenanceCreate = z.object({
   roomId: z.coerce.number().int().positive(),
   description: z.string().trim().min(1).max(500),
@@ -54,7 +49,6 @@ export const maintenanceCreate = z.object({
 });
 export const maintenanceUpdate = maintenanceCreate.partial();
 
-// ---------- Auth ----------
 export const registerSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(100),
   email: z.string().trim().toLowerCase().email('Enter a valid email address.').max(100),
@@ -77,7 +71,6 @@ export const passwordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters.').max(100),
 });
 
-// ---------- Contact ----------
 export const contactSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters.').max(100),
   email: z.string().trim().email('Enter a valid email address.').max(100),

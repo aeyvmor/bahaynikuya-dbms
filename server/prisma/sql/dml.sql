@@ -1,10 +1,7 @@
--- ============================================================
---  Bahay ni Kuya — DML  (Insert / Update / Delete / Select samples)
---  Reference mirror; the app seeds equivalent data via prisma/seed.ts.
--- ============================================================
+-- Bahay ni Kuya — sample inserts, updates, and queries (mirrors prisma/seed.ts).
 
--- ---------- INSERT ----------
--- Login accounts (password_hash shown as a placeholder; the app stores a bcrypt hash).
+-- Inserts
+-- password_hash is stored as a bcrypt hash by the app.
 INSERT INTO users (name, email, password_hash, role) VALUES
   ('House Administrator', 'admin@bahaynikuya.com', '<bcrypt-hash-of-admin123>', 'admin'),
   ('Front Desk Staff',    'staff@bahaynikuya.com', '<bcrypt-hash-of-staff123>', 'staff');
@@ -48,14 +45,14 @@ INSERT INTO maintenance_requests (room_id, description, priority, reported_date,
   (1, 'Flickering ceiling light.',                           'low',    '2026-05-30', 'pending'),
   (3, 'Door lock sticking, hard to open.',                   'low',    '2026-05-18', 'in_progress');
 
--- ---------- UPDATE ----------
+-- Updates
 -- Mark a partial payment as overdue
 UPDATE payments SET status = 'overdue' WHERE payment_id = 4;
 
--- ---------- DELETE (soft-delete for tenants) ----------
+-- Soft-delete a tenant
 UPDATE tenants SET status = 'inactive' WHERE tenant_id = 5;
 
--- ---------- SELECT with JOINs ----------
+-- Queries
 -- Active tenants with their room + rate
 SELECT t.first_name, t.last_name, r.room_number, r.monthly_rate
 FROM tenants t

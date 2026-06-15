@@ -4,7 +4,6 @@ import { serialize } from '../lib/serialize';
 
 const router = Router();
 
-// GET /api/backup -> full database snapshot as JSON
 router.get('/backup', async (_req, res, next) => {
   try {
     const [tenants, rooms, leases, payments, maintenance_requests] = await Promise.all([
@@ -26,7 +25,6 @@ router.get('/backup', async (_req, res, next) => {
   }
 });
 
-// POST /api/restore -> replace ALL data from an uploaded backup
 router.post('/restore', async (req, res, next) => {
   try {
     const body = req.body ?? {};
@@ -40,7 +38,6 @@ router.post('/restore', async (req, res, next) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // delete in FK-safe order
       await tx.payment.deleteMany();
       await tx.maintenanceRequest.deleteMany();
       await tx.lease.deleteMany();

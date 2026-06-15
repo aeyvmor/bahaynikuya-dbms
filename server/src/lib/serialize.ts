@@ -1,8 +1,3 @@
-/**
- * Recursively convert Prisma result objects into JSON-friendly shapes:
- *  - Decimal -> number
- *  - Date    -> 'YYYY-MM-DD' (all our date columns are @db.Date)
- */
 export function serialize(value: any): any {
   if (value === null || value === undefined) return value;
 
@@ -15,7 +10,6 @@ export function serialize(value: any): any {
   }
 
   if (typeof value === 'object') {
-    // Prisma Decimal (decimal.js) exposes toNumber + toFixed
     if (typeof value.toNumber === 'function' && typeof value.toFixed === 'function') {
       return value.toNumber();
     }

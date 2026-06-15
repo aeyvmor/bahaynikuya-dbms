@@ -7,7 +7,6 @@ import { registerSchema, loginSchema, profileSchema, passwordSchema } from '../l
 
 const router = Router();
 
-/** POST /api/auth/register — create an admin/staff account and return a token. */
 router.post('/register', async (req, res, next) => {
   try {
     const { name, email, password, role } = registerSchema.parse(req.body);
@@ -27,7 +26,6 @@ router.post('/register', async (req, res, next) => {
   }
 });
 
-/** POST /api/auth/login — verify credentials and return a token. */
 router.post('/login', async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
@@ -44,7 +42,6 @@ router.post('/login', async (req, res, next) => {
   }
 });
 
-/** GET /api/auth/me — current user from the token. */
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.auth!.userId } });
@@ -55,7 +52,6 @@ router.get('/me', requireAuth, async (req, res, next) => {
   }
 });
 
-/** PUT /api/auth/profile — update the current user's name/email. */
 router.put('/profile', requireAuth, async (req, res, next) => {
   try {
     const { name, email } = profileSchema.parse(req.body);
@@ -75,7 +71,6 @@ router.put('/profile', requireAuth, async (req, res, next) => {
   }
 });
 
-/** PUT /api/auth/password — change the current user's password. */
 router.put('/password', requireAuth, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = passwordSchema.parse(req.body);

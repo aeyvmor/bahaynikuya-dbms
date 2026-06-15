@@ -4,42 +4,39 @@
 
 @layer base {
   :root {
-    /* Warm, community-oriented palette
-       green #629460 · cream #E5D4C0 · charcoal #424B54 · red #F93943 · blue #7EB2DD */
-    --background: 32 42% 83%; /* cream */
-    --foreground: 210 12% 29%; /* charcoal */
+    --background: 32 42% 83%;
+    --foreground: 210 12% 29%;
 
-    --card: 36 44% 96%; /* warm off-white surface */
+    --card: 36 44% 96%;
     --card-foreground: 210 12% 29%;
 
     --popover: 36 44% 96%;
     --popover-foreground: 210 12% 29%;
 
-    --primary: 118 21% 48%; /* green */
+    --primary: 118 21% 48%;
     --primary-foreground: 40 40% 98%;
 
-    --secondary: 33 35% 88%; /* soft sand */
+    --secondary: 33 35% 88%;
     --secondary-foreground: 210 12% 29%;
 
     --muted: 33 30% 90%;
     --muted-foreground: 210 9% 44%;
 
-    --accent: 33 33% 85%; /* hover surface */
+    --accent: 33 33% 85%;
     --accent-foreground: 210 12% 29%;
 
-    --destructive: 357 94% 60%; /* red */
+    --destructive: 357 94% 60%;
     --destructive-foreground: 40 40% 98%;
 
-    --info: 207 58% 68%; /* blue (used sparingly) */
+    --info: 207 58% 68%;
     --info-foreground: 210 30% 24%;
 
-    --border: 30 22% 78%; /* soft warm border */
+    --border: 30 22% 78%;
     --input: 30 22% 78%;
-    --ring: 118 21% 48%; /* green focus ring */
+    --ring: 118 21% 48%;
 
     --radius: 0.85rem;
 
-    /* Sidebar / structure — warm charcoal */
     --sidebar: 210 12% 29%;
     --sidebar-foreground: 40 33% 92%;
     --sidebar-muted: 210 8% 62%;
@@ -61,7 +58,6 @@
   #root {
     height: 100%;
   }
-  /* Crafted serif for headings */
   h1,
   h2,
   h3 {
@@ -70,7 +66,6 @@
   }
 }
 
-/* React Flow tweaks */
 .react-flow__attribution {
   display: none;
 }

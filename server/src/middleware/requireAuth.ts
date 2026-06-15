@@ -10,7 +10,6 @@ declare global {
   }
 }
 
-/** Rejects the request with 401 unless a valid Bearer token is present. */
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) {

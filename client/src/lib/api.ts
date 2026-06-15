@@ -27,7 +27,6 @@ function authHeaders(): Record<string, string> {
 
 async function handle<T>(res: Response, path: string): Promise<T> {
   if (!res.ok) {
-    // Session expired/invalid on a protected route → drop token and bounce to login.
     if (res.status === 401 && !path.startsWith('/auth/')) {
       clearToken();
       if (window.location.pathname.startsWith('/app')) {
@@ -38,7 +37,7 @@ async function handle<T>(res: Response, path: string): Promise<T> {
     try {
       body = await res.json();
     } catch {
-      /* ignore */
+      body = {};
     }
     const msg =
       body?.error ||
@@ -73,7 +72,6 @@ export const api = {
     fetch(`${BASE}${path}`, { method: 'DELETE', headers: authHeaders() }).then((r) => handle<T>(r, path)),
 };
 
-/** Build a query string from a filter object, omitting empty / "all" values. */
 export function qs(params: Record<string, string | undefined>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {

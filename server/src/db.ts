@@ -2,10 +2,6 @@ import { PrismaClient } from '@prisma/client';
 
 export const prisma = new PrismaClient();
 
-/**
- * Reset Postgres identity sequences to MAX(id) so app-created rows do not
- * collide with explicitly-seeded / restored ids.
- */
 export async function resetSequences() {
   const tables: [string, string][] = [
     ['tenants', 'tenant_id'],

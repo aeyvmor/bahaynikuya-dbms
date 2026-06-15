@@ -3,9 +3,7 @@ import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface LogoProps {
-  /** Where the logo links to. Pass null to render a non-clickable mark. */
   to?: string | null;
-  /** Color the wordmark for dark backgrounds. */
   variant?: 'default' | 'light';
   className?: string;
 }
