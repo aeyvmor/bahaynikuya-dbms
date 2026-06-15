@@ -1,0 +1,22 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bnk_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bnk
+      POSTGRES_PASSWORD: bnk_password
+      POSTGRES_DB: bahay_ni_kuya_db
+    ports:
+      # Host 5433 -> container 5432 (avoids clashing with a host Postgres on 5432)
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bnk -d bahay_ni_kuya_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

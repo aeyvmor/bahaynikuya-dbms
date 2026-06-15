@@ -1,0 +1,114 @@
+// Bahay ni Kuya — Prisma schema
+// Models map to the proposal's snake_case table/column names via @map / @@map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantStatus {
+  active
+  inactive
+}
+
+enum RoomType {
+  single
+  double
+  shared
+}
+
+enum RoomStatus {
+  available
+  occupied
+  under_maintenance
+}
+
+enum LeaseStatus {
+  active
+  ended
+}
+
+enum PaymentStatus {
+  paid
+  partial
+  overdue
+}
+
+enum Priority {
+  low
+  medium
+  high
+}
+
+enum RequestStatus {
+  pending
+  in_progress
+  resolved
+}
+
+model Tenant {
+  id        Int          @id @default(autoincrement()) @map("tenant_id")
+  firstName String       @map("first_name") @db.VarChar(50)
+  lastName  String       @map("last_name") @db.VarChar(50)
+  email     String       @unique @db.VarChar(100)
+  phone     String       @db.VarChar(20)
+  status    TenantStatus @default(active)
+  leases    Lease[]
+
+  @@map("tenants")
+}
+
+model Room {
+  id           Int                  @id @default(autoincrement()) @map("room_id")
+  roomNumber   String               @unique @map("room_number") @db.VarChar(10)
+  floor        Int                  @db.SmallInt
+  type         RoomType
+  monthlyRate  Decimal              @map("monthly_rate") @db.Decimal(8, 2)
+  maxOccupancy Int                  @map("max_occupancy") @db.SmallInt
+  status       RoomStatus           @default(available)
+  leases       Lease[]
+  maintenance  MaintenanceRequest[]
+
+  @@map("rooms")
+}
+
+model Lease {
+  id        Int         @id @default(autoincrement()) @map("lease_id")
+  tenantId  Int         @map("tenant_id")
+  roomId    Int         @map("room_id")
+  startDate DateTime    @map("start_date") @db.Date
+  endDate   DateTime?   @map("end_date") @db.Date
+  status    LeaseStatus @default(active)
+  tenant    Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  room      Room        @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  payments  Payment[]
+
+  @@map("leases")
+}
+
+model Payment {
+  id          Int           @id @default(autoincrement()) @map("payment_id")
+  leaseId     Int           @map("lease_id")
+  amount      Decimal       @db.Decimal(8, 2)
+  paymentDate DateTime      @map("payment_date") @db.Date
+  status      PaymentStatus @default(paid)
+  lease       Lease         @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+
+  @@map("payments")
+}
+
+model MaintenanceRequest {
+  id           Int           @id @default(autoincrement()) @map("request_id")
+  roomId       Int           @map("room_id")
+  description  String        @db.Text
+  priority     Priority      @default(low)
+  reportedDate DateTime      @map("reported_date") @db.Date
+  status       RequestStatus @default(pending)
+  room         Room          @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@map("maintenance_requests")
+}

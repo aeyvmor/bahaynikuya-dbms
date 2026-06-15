@@ -1,0 +1,17 @@
+{
+  "name": "bahay-ni-kuya",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Boarding House Management System for Bahay ni Kuya (Vite + React + Express + Prisma + PostgreSQL)",
+  "scripts": {
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:setup": "npm --prefix server run prisma:migrate && npm --prefix server run seed",
+    "dev": "concurrently -n server,client -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
+    "setup": "npm run install:all && npm run db:up && npm --prefix server run prisma:generate && npm run db:setup"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

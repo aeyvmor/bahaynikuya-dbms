@@ -1,0 +1,36 @@
+# Internal working docs (plans, dev notes) — not committed
+docsInternal/
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+**/dist/
+**/build/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+**/.env
+!**/.env.example
+
+# Prisma generated client
+server/src/generated/
+**/generated/prisma/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Postgres docker volume (if bind-mounted locally)
+pgdata/
