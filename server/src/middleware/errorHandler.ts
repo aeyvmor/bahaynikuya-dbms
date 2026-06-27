@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ZodError } from 'zod';
 
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
@@ -10,7 +10,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     });
   }
 
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+  if (err instanceof PrismaClientKnownRequestError) {
     if (err.code === 'P2002') {
       const target = Array.isArray(err.meta?.target) ? (err.meta?.target as string[]).join(', ') : 'value';
       return res.status(409).json({ error: `A record with that ${target} already exists.` });

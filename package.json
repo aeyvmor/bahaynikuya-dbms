@@ -4,14 +4,17 @@
   "private": true,
   "description": "Boarding House Management System for Bahay ni Kuya (Vite + React + Express + Prisma + PostgreSQL)",
   "scripts": {
-    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
-    "db:up": "docker compose up -d",
-    "db:down": "docker compose down",
-    "db:setup": "npm --prefix server run prisma:migrate && npm --prefix server run seed",
+    "install:all": "npm ci && npm --prefix server ci && npm --prefix client ci",
+    "db:setup": "npm --prefix server run prisma:generate && npm --prefix server run prisma:deploy && npm --prefix server run seed",
+    "db:reset": "npm --prefix server run prisma:deploy && npm --prefix server run seed:reset",
     "dev": "concurrently -n server,client -c blue,magenta \"npm --prefix server run dev\" \"npm --prefix client run dev\"",
-    "setup": "npm run install:all && npm run db:up && npm --prefix server run prisma:generate && npm run db:setup"
+    "setup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./setup-and-run.ps1 -SetupOnly -NoPause",
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./setup-and-run.ps1 -RunOnly -NoPause"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "overrides": {
+    "shell-quote": "^1.9.0"
   }
 }

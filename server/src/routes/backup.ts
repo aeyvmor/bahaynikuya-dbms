@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { Prisma } from '@prisma/client';
 import { prisma, resetSequences } from '../db';
 import { serialize } from '../lib/serialize';
 
@@ -37,7 +38,7 @@ router.post('/restore', async (req, res, next) => {
       }
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.payment.deleteMany();
       await tx.maintenanceRequest.deleteMany();
       await tx.lease.deleteMany();

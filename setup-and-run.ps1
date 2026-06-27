@@ -1,46 +1,40 @@
+param(
+    [switch]$RunOnly,
+    [switch]$SetupOnly,
+    [switch]$ResetDatabase,
+    [switch]$NoBrowser,
+    [switch]$NoPause
+)
+
 # ============================================================
-#  Bahay ni Kuya - automated setup + run (clean Windows PC)
-#  Installs Node + PostgreSQL if missing, creates the database,
-#  seeds it, launches the API + web client, and opens the
-#  browser. No Docker required.
+#  Bahay ni Kuya - one-script Windows setup + run
+#  Fresh PC path:
+#    1. Double-click START-HERE.bat
+#    2. Approve the admin prompt if Node/PostgreSQL must be installed
+#    3. Wait for the browser to open
 # ============================================================
 
 $ErrorActionPreference = 'Stop'
-
-# --- config (matches the app's expectations) ---------------
-$ProjectDir   = $PSScriptRoot
-$DbName       = 'bahay_ni_kuya_db'
-$DbUser       = 'bnk'
-$DbPassword   = 'bnk_password'
-$DbPort       = 5432                       # native Postgres default
-$SuperPass    = 'postgres'                 # superuser pw we set during install
-$ApiPort      = 4000
-$WebPort      = 5173
-$DatabaseUrl  = "postgresql://$DbUser`:$DbPassword@localhost:$DbPort/$DbName`?schema=public"
-
-function Info($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
-function Ok($m)    { Write-Host "[OK] $m" -ForegroundColor Green }
-function Warn($m)  { Write-Host "[!]  $m" -ForegroundColor Yellow }
-
-# --- 1. make sure we are running as Administrator ----------
-$me = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $me.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Info 'Requesting administrator rights (needed to install Node + PostgreSQL)...'
-    Start-Process powershell -Verb RunAs -ArgumentList @(
-        '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$PSCommandPath`""
-    )
-    return
+Set-StrictMode -Version Latest
+if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
+    $PSNativeCommandUseErrorActionPreference = $false
 }
 
-Set-Location $ProjectDir
-Write-Host ''
-Write-Host '====================================================' -ForegroundColor Magenta
-Write-Host '  Bahay ni Kuya - setting up. This can take a few'    -ForegroundColor Magenta
-Write-Host '  minutes the first time. Leave this window open.'    -ForegroundColor Magenta
-Write-Host '====================================================' -ForegroundColor Magenta
-Write-Host ''
+$ProjectDir  = $PSScriptRoot
+$DbName      = 'bahay_ni_kuya_db'
+$DbUser      = 'bnk'
+$DbPassword  = 'bnk_password'
+$DbPort      = 5432
+$SuperPass   = 'postgres'
+$ApiPort     = 4000
+$WebPort     = 5173
+$DatabaseUrl = "postgresql://$DbUser`:$DbPassword@localhost:$DbPort/$DbName`?schema=public"
+$script:PsqlPath = $null
 
-# --- keep the window open and show WHICH step failed --------
+function Info([string]$message) { Write-Host "==> $message" -ForegroundColor Cyan }
+function Ok([string]$message)   { Write-Host "[OK] $message" -ForegroundColor Green }
+function Warn([string]$message) { Write-Host "[!]  $message" -ForegroundColor Yellow }
+
 trap {
     Write-Host ''
     Write-Host '====================================================' -ForegroundColor Red
@@ -49,130 +43,396 @@ trap {
     Write-Host ''
     Write-Host $_.Exception.Message -ForegroundColor Yellow
     Write-Host ''
-    Write-Host 'Copy the yellow text above and send it over.'        -ForegroundColor Yellow
-    Read-Host 'Press Enter to close'
+    Write-Host 'If you need help, send the yellow error text above.' -ForegroundColor Yellow
+    if (-not $NoPause) {
+        Read-Host 'Press Enter to close' | Out-Null
+    }
     exit 1
 }
 
-# --- helper: reload PATH so freshly installed tools resolve -
+function Have([string]$command) {
+    return [bool](Get-Command $command -ErrorAction SilentlyContinue)
+}
+
+function Test-Admin {
+    $me = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+    return $me.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Restart-Elevated([string]$reason) {
+    if (Test-Admin) { return }
+
+    Info "Requesting administrator rights ($reason)..."
+    $args = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"")
+    if ($RunOnly)       { $args += '-RunOnly' }
+    if ($SetupOnly)     { $args += '-SetupOnly' }
+    if ($ResetDatabase) { $args += '-ResetDatabase' }
+    if ($NoBrowser)     { $args += '-NoBrowser' }
+    if ($NoPause)       { $args += '-NoPause' }
+
+    Start-Process -FilePath 'powershell' -Verb RunAs -ArgumentList $args | Out-Null
+    exit 0
+}
+
 function Sync-Path {
-    $m = [Environment]::GetEnvironmentVariable('Path','Machine')
-    $u = [Environment]::GetEnvironmentVariable('Path','User')
-    $env:Path = "$m;$u"
+    $machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+    $user = [Environment]::GetEnvironmentVariable('Path', 'User')
+    $env:Path = "$machine;$user"
 }
 
-function Have($cmd) { [bool](Get-Command $cmd -ErrorAction SilentlyContinue) }
-
-# --- 2. winget present? ------------------------------------
-if (-not (Have 'winget')) {
-    Warn 'winget (App Installer) was not found.'
-    Warn 'Please install "App Installer" from the Microsoft Store, then re-run START-HERE.bat.'
-    Read-Host 'Press Enter to exit'
-    return
+function Ensure-Winget {
+    if (Have 'winget') { return }
+    throw 'winget was not found. Install "App Installer" from the Microsoft Store, then run START-HERE.bat again.'
 }
 
-# --- 3. Node.js --------------------------------------------
-if (Have 'node') {
-    Ok "Node already installed ($(node -v))"
-} else {
-    Info 'Installing Node.js LTS...'
-    winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent
-    Sync-Path
-    if (-not (Have 'node')) { throw 'Node install finished but "node" is still not on PATH. Try restarting the PC and re-running.' }
-    Ok "Node installed ($(node -v))"
+function Test-PortOpen([int]$port) {
+    $client = $null
+    try {
+        $client = New-Object Net.Sockets.TcpClient
+        $iar = $client.BeginConnect('127.0.0.1', $port, $null, $null)
+        if (-not $iar.AsyncWaitHandle.WaitOne(400, $false)) { return $false }
+        $client.EndConnect($iar)
+        return $true
+    } catch {
+        return $false
+    } finally {
+        if ($client) { $client.Close() }
+    }
 }
 
-# --- 4. PostgreSQL -----------------------------------------
+function Assert-PortFree([int]$port, [string]$name) {
+    if (Test-PortOpen $port) {
+        throw "$name port $port is already in use. Close the other app using it, then run this script again."
+    }
+}
+
 function Find-Psql {
     $hit = Get-ChildItem 'C:\Program Files\PostgreSQL\*\bin\psql.exe' -ErrorAction SilentlyContinue |
-           Sort-Object FullName -Descending | Select-Object -First 1
+        Sort-Object FullName -Descending |
+        Select-Object -First 1
     if ($hit) { return $hit.FullName }
-    if (Have 'psql') { return 'psql' }
+
+    $cmd = Get-Command 'psql' -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
     return $null
 }
 
-$psql = Find-Psql
-if ($psql) {
-    Ok 'PostgreSQL already installed'
-} else {
-    Info 'Installing PostgreSQL 16 (this is the big one)...'
-    winget install -e --id PostgreSQL.PostgreSQL.16 --accept-source-agreements --accept-package-agreements --silent `
-        --override "--mode unattended --unattendedmodeui none --superpassword `"$SuperPass`" --serverport $DbPort --enable-components server,commandlinetools"
+function Find-PgIsReady {
+    if ($script:PsqlPath -and $script:PsqlPath -ne 'psql') {
+        $candidate = Join-Path (Split-Path $script:PsqlPath -Parent) 'pg_isready.exe'
+        if (Test-Path $candidate) { return $candidate }
+    }
+
+    $cmd = Get-Command 'pg_isready' -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    return $null
+}
+
+function Ensure-Node([switch]$AllowInstall) {
+    if ((Have 'node') -and (Have 'npm')) {
+        Ok "Node ready ($(node -v))"
+        return
+    }
+
+    if (-not $AllowInstall) {
+        throw 'Node.js/npm is missing. Run START-HERE.bat for the full setup.'
+    }
+
+    Restart-Elevated 'needed to install Node.js'
+    Ensure-Winget
+
+    Info 'Installing Node.js LTS...'
+    winget install -e --id OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent
+    if ($LASTEXITCODE -ne 0) { throw 'Node.js install failed.' }
+
     Sync-Path
-    Start-Sleep -Seconds 3
-    $psql = Find-Psql
-    if (-not $psql) { throw 'PostgreSQL install finished but psql.exe was not found. Try restarting the PC and re-running.' }
-    Ok 'PostgreSQL installed'
+    if (-not ((Have 'node') -and (Have 'npm'))) {
+        throw 'Node.js installed, but node/npm are still not on PATH. Restart Windows, then run START-HERE.bat again.'
+    }
+
+    Ok "Node installed ($(node -v))"
 }
 
-# make sure the service is running
-$svc = Get-Service -Name 'postgresql*' -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($svc -and $svc.Status -ne 'Running') {
-    Info "Starting PostgreSQL service ($($svc.Name))..."
-    Start-Service $svc.Name
-    Start-Sleep -Seconds 3
+function Ensure-Postgres([switch]$AllowInstall) {
+    $script:PsqlPath = Find-Psql
+
+    if (-not $script:PsqlPath) {
+        if (-not $AllowInstall) {
+            throw 'PostgreSQL tools are missing. Run START-HERE.bat for the full setup.'
+        }
+
+        if (Test-PortOpen $DbPort) {
+            throw "Port $DbPort is already in use, but psql.exe was not found. Install PostgreSQL tools or free the port, then rerun."
+        }
+
+        Restart-Elevated 'needed to install PostgreSQL'
+        Ensure-Winget
+
+        Info 'Installing PostgreSQL 16...'
+        winget install -e --id PostgreSQL.PostgreSQL.16 --accept-source-agreements --accept-package-agreements --silent `
+            --override "--mode unattended --unattendedmodeui none --superpassword `"$SuperPass`" --serverport $DbPort --enable-components server,commandlinetools"
+        if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL install failed.' }
+
+        Sync-Path
+        Start-Sleep -Seconds 3
+        $script:PsqlPath = Find-Psql
+        if (-not $script:PsqlPath) {
+            throw 'PostgreSQL installed, but psql.exe was not found. Restart Windows, then run START-HERE.bat again.'
+        }
+    }
+
+    Ok "PostgreSQL tools ready ($script:PsqlPath)"
+
+    $svc = Get-Service -Name 'postgresql*' -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        Select-Object -First 1
+
+    if ($svc) {
+        if ($svc.Status -ne 'Running') {
+            if (-not (Test-Admin) -and $AllowInstall) {
+                Restart-Elevated 'needed to start PostgreSQL'
+            }
+
+            Info "Starting PostgreSQL service ($($svc.Name))..."
+            Start-Service $svc.Name
+            Start-Sleep -Seconds 3
+        }
+    } else {
+        Warn 'No PostgreSQL Windows service was found; assuming PostgreSQL is managed externally.'
+    }
 }
 
-# --- 5. create app role + database (idempotent) ------------
-Info 'Creating database and user (if they do not exist yet)...'
-$env:PGPASSWORD = $SuperPass
-$createRole = "SELECT 'CREATE ROLE $DbUser LOGIN PASSWORD ''$DbPassword'' CREATEDB' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname='$DbUser')\gexec"
-$createDb   = "SELECT 'CREATE DATABASE $DbName OWNER $DbUser' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='$DbName')\gexec"
-& $psql -h localhost -p $DbPort -U postgres -d postgres -v ON_ERROR_STOP=1 -c $createRole
-& $psql -h localhost -p $DbPort -U postgres -d postgres -v ON_ERROR_STOP=1 -c $createDb
-Remove-Item Env:\PGPASSWORD
-Ok 'Database ready'
+function Wait-ForPostgres {
+    $readyTool = Find-PgIsReady
 
-# --- 6. write server/.env ----------------------------------
-$envPath = Join-Path $ProjectDir 'server\.env'
-$jwt = 'dev-only-secret-please-change-' + ([guid]::NewGuid().ToString('N'))
-@"
+    Info "Waiting for PostgreSQL on localhost:$DbPort..."
+    for ($i = 0; $i -lt 60; $i++) {
+        if ($readyTool) {
+            & $readyTool -h localhost -p $DbPort | Out-Null
+            if ($LASTEXITCODE -eq 0) {
+                Ok 'PostgreSQL is accepting connections'
+                return
+            }
+        } elseif (Test-PortOpen $DbPort) {
+            Ok 'PostgreSQL port is open'
+            return
+        }
+
+        Start-Sleep -Seconds 1
+    }
+
+    throw "PostgreSQL did not become ready on localhost:$DbPort."
+}
+
+function With-PgPassword([string]$password, [scriptblock]$command) {
+    $oldPassword = [Environment]::GetEnvironmentVariable('PGPASSWORD', 'Process')
+    try {
+        $env:PGPASSWORD = $password
+        & $command
+    } finally {
+        if ($null -eq $oldPassword) {
+            Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+        } else {
+            $env:PGPASSWORD = $oldPassword
+        }
+    }
+}
+
+function Test-AppDatabase {
+    if (-not $script:PsqlPath) { return $false }
+
+    $ok = $false
+    With-PgPassword $DbPassword {
+        try {
+            & $script:PsqlPath -h localhost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -c 'select 1;' *> $null
+            $ok = ($LASTEXITCODE -eq 0)
+        } catch {
+            $ok = $false
+        }
+    }
+    return $ok
+}
+
+function Ensure-Database {
+    if (Test-AppDatabase) {
+        Ok "Database '$DbName' already ready"
+        return
+    }
+
+    Info "Creating/repairing database '$DbName' and role '$DbUser'..."
+
+    $sql = @"
+DO `$`$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$DbUser') THEN
+    CREATE ROLE $DbUser LOGIN PASSWORD '$DbPassword' CREATEDB;
+  ELSE
+    ALTER ROLE $DbUser LOGIN PASSWORD '$DbPassword' CREATEDB;
+  END IF;
+END
+`$`$;
+SELECT 'CREATE DATABASE $DbName OWNER $DbUser'
+  WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$DbName')\gexec
+ALTER DATABASE $DbName OWNER TO $DbUser;
+GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;
+"@
+
+    $tmp = Join-Path $env:TEMP 'bnk_setup_database.sql'
+    $sql | Set-Content -Path $tmp -Encoding utf8
+
+    $exitCode = 0
+    try {
+        try {
+            With-PgPassword $SuperPass {
+                & $script:PsqlPath -h localhost -p $DbPort -U postgres -d postgres -v ON_ERROR_STOP=1 -f $tmp *> $null
+                $script:LastDatabaseSetupExitCode = $LASTEXITCODE
+            }
+            $exitCode = $script:LastDatabaseSetupExitCode
+        } catch {
+            $exitCode = 1
+        }
+    } finally {
+        Remove-Item $tmp -ErrorAction SilentlyContinue
+        Remove-Variable -Name LastDatabaseSetupExitCode -Scope Script -ErrorAction SilentlyContinue
+    }
+
+    if ($exitCode -ne 0) {
+        throw "Could not create the database as postgres. On a fresh script-installed PostgreSQL, the password is '$SuperPass'. If this PC already had PostgreSQL, update the postgres password or use pgAdmin/psql to create the '$DbUser' role and '$DbName' database."
+    }
+
+    if (-not (Test-AppDatabase)) {
+        throw "Database setup finished, but the app user '$DbUser' still cannot connect."
+    }
+
+    Ok 'Database role and database are ready'
+}
+
+function Write-ServerEnv {
+    $envPath = Join-Path $ProjectDir 'server\.env'
+    $jwt = $null
+
+    if (Test-Path $envPath) {
+        foreach ($line in Get-Content $envPath) {
+            if ($line -match '^\s*JWT_SECRET\s*=\s*(.+)\s*$') {
+                $jwt = $Matches[1].Trim().Trim('"')
+                break
+            }
+        }
+    }
+
+    if (-not $jwt) {
+        $jwt = 'dev-only-secret-' + ([guid]::NewGuid().ToString('N'))
+    }
+
+    @"
 DATABASE_URL="$DatabaseUrl"
 PORT=$ApiPort
 JWT_SECRET="$jwt"
 "@ | Set-Content -Path $envPath -Encoding utf8
-Ok "Wrote server\.env"
 
-# --- 7. install dependencies -------------------------------
-Info 'Installing project dependencies (npm)...'
-npm run install:all
-if ($LASTEXITCODE -ne 0) { throw 'npm install failed.' }
-Ok 'Dependencies installed'
+    Ok 'server\.env ready'
+}
 
-# --- 8. prisma generate + migrate + seed -------------------
-Info 'Setting up the database schema and seed data...'
-npm --prefix server run prisma:generate
-if ($LASTEXITCODE -ne 0) { throw 'prisma generate failed.' }
-npm --prefix server run prisma:deploy
-if ($LASTEXITCODE -ne 0) { throw 'prisma migrate deploy failed.' }
-npm --prefix server run seed
-if ($LASTEXITCODE -ne 0) { Warn 'Seeding reported an error (data may already exist) - continuing.' }
-Ok 'Database schema + seed ready'
+function Ensure-Dependencies([switch]$Force) {
+    $missing =
+        -not (Test-Path (Join-Path $ProjectDir 'node_modules')) -or
+        -not (Test-Path (Join-Path $ProjectDir 'server\node_modules')) -or
+        -not (Test-Path (Join-Path $ProjectDir 'client\node_modules'))
 
-# --- 9. open the browser once the web server is up ---------
-Info 'Starting the app...'
-Start-Job -Name OpenBrowser -ScriptBlock {
-    param($port)
-    for ($i = 0; $i -lt 60; $i++) {
-        try {
-            $c = New-Object Net.Sockets.TcpClient
-            $c.Connect('localhost', $port)
-            $c.Close()
-            Start-Process "http://localhost:$port"
-            break
-        } catch { Start-Sleep -Seconds 1 }
+    if (-not $Force -and -not $missing) {
+        Ok 'Dependencies already installed'
+        return
     }
-} -ArgumentList $WebPort | Out-Null
+
+    Info 'Installing project dependencies...'
+    npm run install:all
+    if ($LASTEXITCODE -ne 0) { throw 'npm dependency install failed.' }
+    Ok 'Dependencies installed'
+}
+
+function Invoke-PrismaSetup {
+    Info 'Generating Prisma client...'
+    npm --prefix server run prisma:generate
+    if ($LASTEXITCODE -ne 0) { throw 'Prisma client generation failed.' }
+
+    Info 'Applying database migrations...'
+    npm --prefix server run prisma:deploy
+    if ($LASTEXITCODE -ne 0) { throw 'Prisma migration failed.' }
+
+    if ($ResetDatabase) {
+        Info 'Resetting sample data...'
+        npm --prefix server run seed:reset
+    } else {
+        Info 'Seeding sample data if the database is empty...'
+        npm --prefix server run seed
+    }
+
+    if ($LASTEXITCODE -ne 0) { throw 'Database seed failed.' }
+    Ok 'Database schema and sample data are ready'
+}
+
+function Open-BrowserWhenReady {
+    if ($NoBrowser) { return }
+
+    Start-Job -Name 'BNKOpenBrowser' -ScriptBlock {
+        param($port)
+        for ($i = 0; $i -lt 60; $i++) {
+            try {
+                $client = New-Object Net.Sockets.TcpClient
+                $client.Connect('localhost', $port)
+                $client.Close()
+                Start-Process "http://localhost:$port"
+                break
+            } catch {
+                Start-Sleep -Seconds 1
+            }
+        }
+    } -ArgumentList $WebPort | Out-Null
+}
+
+function Start-App {
+    Assert-PortFree $ApiPort 'API'
+    Assert-PortFree $WebPort 'Web client'
+
+    Open-BrowserWhenReady
+
+    Write-Host ''
+    Write-Host '====================================================' -ForegroundColor Green
+    Write-Host "  Ready. Web app: http://localhost:$WebPort"          -ForegroundColor Green
+    Write-Host "  API:           http://localhost:$ApiPort"           -ForegroundColor Green
+    Write-Host ''                                                           -ForegroundColor Green
+    Write-Host '  Login: admin@bahaynikuya.com / admin123'          -ForegroundColor Green
+    Write-Host '  Keep this window open. Press Ctrl+C to stop.'     -ForegroundColor Green
+    Write-Host '====================================================' -ForegroundColor Green
+    Write-Host ''
+
+    npm run dev
+}
+
+Set-Location $ProjectDir
 
 Write-Host ''
-Write-Host '====================================================' -ForegroundColor Green
-Write-Host "  All set! The app will open at http://localhost:$WebPort"  -ForegroundColor Green
-Write-Host "  API runs on http://localhost:$ApiPort"                     -ForegroundColor Green
-Write-Host ''
-Write-Host '  Keep this window open while testing.'               -ForegroundColor Green
-Write-Host '  Close it (or press Ctrl+C) to stop the app.'        -ForegroundColor Green
-Write-Host '====================================================' -ForegroundColor Green
+Write-Host '====================================================' -ForegroundColor Magenta
+Write-Host '  Bahay ni Kuya setup'                              -ForegroundColor Magenta
+Write-Host '====================================================' -ForegroundColor Magenta
 Write-Host ''
 
-# --- 10. run server + client (blocks here) -----------------
-npm run dev
+Ensure-Node -AllowInstall:(!$RunOnly)
+Ensure-Postgres -AllowInstall:(!$RunOnly)
+Wait-ForPostgres
+Ensure-Database
+Write-ServerEnv
+Ensure-Dependencies -Force:(!$RunOnly)
+Invoke-PrismaSetup
+
+if ($SetupOnly) {
+    Ok 'Setup complete. Run RUN-APP.bat when you want to start the app.'
+    if (-not $NoPause) {
+        Read-Host 'Press Enter to close' | Out-Null
+    }
+    exit 0
+}
+
+Start-App

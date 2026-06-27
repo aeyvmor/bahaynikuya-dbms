@@ -1,7 +1,9 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+const resetRequested = process.argv.includes('--reset') || process.env.SEED_RESET === 'true';
 
 const d = (s: string) => new Date(s + 'T00:00:00.000Z');
 
@@ -24,12 +26,31 @@ async function resetSequences() {
 async function main() {
   console.log('Seeding Bahay ni Kuya database...');
 
-  await prisma.payment.deleteMany();
-  await prisma.maintenanceRequest.deleteMany();
-  await prisma.lease.deleteMany();
-  await prisma.tenant.deleteMany();
-  await prisma.room.deleteMany();
-  await prisma.user.deleteMany();
+  const existingCounts = {
+    users: await prisma.user.count(),
+    tenants: await prisma.tenant.count(),
+    rooms: await prisma.room.count(),
+    leases: await prisma.lease.count(),
+    payments: await prisma.payment.count(),
+    maintenance: await prisma.maintenanceRequest.count(),
+  };
+  const existingRows = Object.values(existingCounts).reduce((sum, count) => sum + count, 0);
+
+  if (existingRows > 0 && !resetRequested) {
+    console.log('Seed skipped: database already contains data:', existingCounts);
+    console.log('Run `npm --prefix server run seed:reset` to replace it with sample data.');
+    return;
+  }
+
+  if (resetRequested) {
+    console.log('Reset requested: replacing current data with sample data.');
+    await prisma.payment.deleteMany();
+    await prisma.maintenanceRequest.deleteMany();
+    await prisma.lease.deleteMany();
+    await prisma.tenant.deleteMany();
+    await prisma.room.deleteMany();
+    await prisma.user.deleteMany();
+  }
 
   await prisma.room.createMany({
     data: [
