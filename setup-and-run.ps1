@@ -40,6 +40,20 @@ Write-Host '  minutes the first time. Leave this window open.'    -ForegroundCol
 Write-Host '====================================================' -ForegroundColor Magenta
 Write-Host ''
 
+# --- keep the window open and show WHICH step failed --------
+trap {
+    Write-Host ''
+    Write-Host '====================================================' -ForegroundColor Red
+    Write-Host '  SETUP STOPPED - something went wrong.'              -ForegroundColor Red
+    Write-Host '====================================================' -ForegroundColor Red
+    Write-Host ''
+    Write-Host $_.Exception.Message -ForegroundColor Yellow
+    Write-Host ''
+    Write-Host 'Copy the yellow text above and send it over.'        -ForegroundColor Yellow
+    Read-Host 'Press Enter to close'
+    exit 1
+}
+
 # --- helper: reload PATH so freshly installed tools resolve -
 function Sync-Path {
     $m = [Environment]::GetEnvironmentVariable('Path','Machine')
