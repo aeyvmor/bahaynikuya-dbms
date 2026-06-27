@@ -28,7 +28,8 @@ $DbPort      = 5432
 $SuperPass   = 'postgres'
 $ApiPort     = 4000
 $WebPort     = 5173
-$DatabaseUrl = "postgresql://$DbUser`:$DbPassword@localhost:$DbPort/$DbName`?schema=public"
+$DbHost      = '127.0.0.1'
+$DatabaseUrl = "postgresql://$DbUser`:$DbPassword@$DbHost`:$DbPort/$DbName`?schema=public"
 $script:PsqlPath = $null
 
 function Info([string]$message) { Write-Host "==> $message" -ForegroundColor Cyan }
@@ -207,10 +208,10 @@ function Ensure-Postgres([switch]$AllowInstall) {
 function Wait-ForPostgres {
     $readyTool = Find-PgIsReady
 
-    Info "Waiting for PostgreSQL on localhost:$DbPort..."
+    Info "Waiting for PostgreSQL on $DbHost`:$DbPort..."
     for ($i = 0; $i -lt 60; $i++) {
         if ($readyTool) {
-            & $readyTool -h localhost -p $DbPort | Out-Null
+            & $readyTool -h $DbHost -p $DbPort | Out-Null
             if ($LASTEXITCODE -eq 0) {
                 Ok 'PostgreSQL is accepting connections'
                 return
@@ -223,14 +224,19 @@ function Wait-ForPostgres {
         Start-Sleep -Seconds 1
     }
 
-    throw "PostgreSQL did not become ready on localhost:$DbPort."
+    throw "PostgreSQL did not become ready on $DbHost`:$DbPort."
 }
 
-function With-PgPassword([string]$password, [scriptblock]$command) {
+function Invoke-Psql([string]$password, [string[]]$arguments, [switch]$Quiet) {
     $oldPassword = [Environment]::GetEnvironmentVariable('PGPASSWORD', 'Process')
     try {
         $env:PGPASSWORD = $password
-        & $command
+        if ($Quiet) {
+            & $script:PsqlPath @arguments *> $null
+        } else {
+            & $script:PsqlPath @arguments
+        }
+        return $LASTEXITCODE
     } finally {
         if ($null -eq $oldPassword) {
             Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
@@ -243,16 +249,19 @@ function With-PgPassword([string]$password, [scriptblock]$command) {
 function Test-AppDatabase {
     if (-not $script:PsqlPath) { return $false }
 
-    $ok = $false
-    With-PgPassword $DbPassword {
-        try {
-            & $script:PsqlPath -h localhost -p $DbPort -U $DbUser -d $DbName -v ON_ERROR_STOP=1 -c 'select 1;' *> $null
-            $ok = ($LASTEXITCODE -eq 0)
-        } catch {
-            $ok = $false
-        }
+    try {
+        $exitCode = Invoke-Psql $DbPassword @(
+            '-h', $DbHost,
+            '-p', "$DbPort",
+            '-U', $DbUser,
+            '-d', $DbName,
+            '-v', 'ON_ERROR_STOP=1',
+            '-c', 'select 1;'
+        ) -Quiet
+        return ($exitCode -eq 0)
+    } catch {
+        return $false
     }
-    return $ok
 }
 
 function Ensure-Database {
@@ -285,17 +294,19 @@ GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;
     $exitCode = 0
     try {
         try {
-            With-PgPassword $SuperPass {
-                & $script:PsqlPath -h localhost -p $DbPort -U postgres -d postgres -v ON_ERROR_STOP=1 -f $tmp *> $null
-                $script:LastDatabaseSetupExitCode = $LASTEXITCODE
-            }
-            $exitCode = $script:LastDatabaseSetupExitCode
+            $exitCode = Invoke-Psql $SuperPass @(
+                '-h', $DbHost,
+                '-p', "$DbPort",
+                '-U', 'postgres',
+                '-d', 'postgres',
+                '-v', 'ON_ERROR_STOP=1',
+                '-f', $tmp
+            ) -Quiet
         } catch {
             $exitCode = 1
         }
     } finally {
         Remove-Item $tmp -ErrorAction SilentlyContinue
-        Remove-Variable -Name LastDatabaseSetupExitCode -Scope Script -ErrorAction SilentlyContinue
     }
 
     if ($exitCode -ne 0) {
@@ -303,6 +314,16 @@ GRANT ALL PRIVILEGES ON DATABASE $DbName TO $DbUser;
     }
 
     if (-not (Test-AppDatabase)) {
+        Warn "Database setup finished, but '$DbUser' still failed the quiet connection test."
+        Warn 'Running the same test again with PostgreSQL output visible...'
+        Invoke-Psql $DbPassword @(
+            '-h', $DbHost,
+            '-p', "$DbPort",
+            '-U', $DbUser,
+            '-d', $DbName,
+            '-v', 'ON_ERROR_STOP=1',
+            '-c', 'select current_user, current_database();'
+        ) | Out-Null
         throw "Database setup finished, but the app user '$DbUser' still cannot connect."
     }
 
